@@ -31,7 +31,7 @@ export default function LandingPage() {
 
 
             <div className="landingMainContainer">
-                <div>
+                <div className='description'>
                     <h1><span style={{ color: "#FF9839" }}>Connect</span> with your loved Ones</h1>
 
                     <p>Cover a distance by MeetMingle Video Call</p>

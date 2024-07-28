@@ -94,3 +94,36 @@
   height: auto;
   border-radius: 20px;
 }
+
+@media (max-width:500px){
+  /* .landingPageContainer{
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    width: 100vw;
+    height: 200%;
+  } */
+  nav{
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+  }
+  /* .landingMainContainer{
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+  } */
+  .landingMainContainer ,.landingMainContainer > .description{
+    flex-direction: column;
+ 
+   }
+   .landingPageContainer {
+    width: 100vw;
+    height: 100vh;
+    background: url("/public/background.png");
+    background-repeat: repeat;
+    background-size: cover;
+    color: white;
+  }
+
+}
