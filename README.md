@@ -1,2 +1,2 @@
-# Zoom
+# MeetMingle
 A full stack video conferencing web application.
