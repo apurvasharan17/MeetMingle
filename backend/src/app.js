@@ -57,7 +57,7 @@ const start = async () => {
     process.exit(1);
   }
 
-  connectToSocket(server);
+  connectToSocket(server, allowedOrigins);
 
   server.listen(app.get("port"), () => {
     console.log(`Listening on port ${app.get("port")}`);

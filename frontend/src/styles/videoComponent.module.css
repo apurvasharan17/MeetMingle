@@ -1,61 +1,149 @@
+/* ---------- Lobby ---------- */
+
+.lobbyContainer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    min-height: 100vh;
+    padding: 20px;
+    background: rgb(1, 4, 48);
+    color: white;
+}
+
+.lobbyPreview {
+    width: min(90vw, 560px);
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    border-radius: 12px;
+    background: #000;
+}
+
+.lobbyControls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.lobbyControls :global(.MuiOutlinedInput-root) {
+    background: white;
+    border-radius: 4px;
+}
+
+/* ---------- Call ---------- */
+
 .meetVideoContainer {
     position: relative;
     height: 100vh;
+    overflow: hidden;
     background: rgb(1, 4, 48);
 }
 
 .meetUserVideo {
     position: absolute;
-    bottom: 10vh;
+    bottom: 12vh;
+    left: 16px;
     height: 20vh;
     width: auto;
-    left: 0;
-    border-radius: 20px;
+    max-width: 30vw;
+    border-radius: 12px;
+    object-fit: cover;
+    background: #000;
+    z-index: 2;
+}
+
+.conferenceView {
+    display: grid;
+    /* Tiles reflow instead of overflowing once a third person joins. */
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 12px;
+    padding: 16px;
+    height: calc(100vh - 90px);
+    overflow-y: auto;
+    align-content: start;
+}
+
+.remoteTile video {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    border-radius: 10px;
+    background: #000;
+}
+
+.waitingText {
+    color: #b8bdd8;
+    grid-column: 1 / -1;
+    text-align: center;
+    margin-top: 20vh;
 }
 
 .buttonContainers {
     position: absolute;
-    width: 100vw;
+    width: 100%;
     bottom: 0;
+    padding: 10px 0;
     text-align: center;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent);
+    z-index: 3;
 }
 
 .buttonContainers svg {
-    font-size: 3rem;
+    font-size: 2.2rem;
 }
 
-.conferenceView { 
-
-    display: flex;
-    
-    padding: 10px;
-    gap: 10px;
-}
-
-.conferenceView  video {
-    width: 40vw;
-    height: 20vh;
-    min-width: 30vw;
-    border-radius: 10px;
-}
+/* ---------- Chat ---------- */
 
 .chatRoom {
     position: absolute;
-    height: 90vh;
+    top: 0;
     right: 0;
+    height: 100vh;
+    width: min(90vw, 360px);
     background: white;
-    border-radius: 10px;
-    width: 30vw;
-    padding-inline: 20px;
+    padding: 16px;
+    box-shadow: -2px 0 12px rgba(0, 0, 0, 0.3);
+    z-index: 4;
 }
 
 .chatContainer {
-    position: relative;
+    display: flex;
+    flex-direction: column;
     height: 100%;
+    gap: 12px;
 }
 
+/* Was position:absolute, which sat on top of the message list. */
+.chattingDisplay {
+    flex: 1;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.chatMessage {
+    margin-bottom: 16px;
+    word-break: break-word;
+}
+
+.chatSender {
+    font-weight: bold;
+    margin: 0 0 2px;
+}
 
 .chattingArea {
-    position: absolute;
-    bottom: 0;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+@media (max-width: 600px) {
+    .meetUserVideo {
+        height: 14vh;
+        bottom: 14vh;
+    }
+
+    .buttonContainers svg {
+        font-size: 1.8rem;
+    }
 }
