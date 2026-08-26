@@ -1,13 +1,28 @@
 import { Router } from "express";
-import { addToHistory, getUserHistory, login, register } from "../controllers/user.controller.js";
+import rateLimit from "express-rate-limit";
 
-
+import {
+  addToHistory,
+  getUserHistory,
+  login,
+  register,
+} from "../controllers/user.controller.js";
+import { requireAuth } from "../middlewares/auth.middleware.js";
 
 const router = Router();
 
-router.route("/login").post(login)
-router.route("/register").post(register)
-router.route("/add_to_activity").post(addToHistory)
-router.route("/get_all_activity").get(getUserHistory)
+// Slows credential stuffing on the auth endpoints
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Too many attempts, please try again later" },
+});
+
+router.route("/login").post(authLimiter, login);
+router.route("/register").post(authLimiter, register);
+router.route("/add_to_activity").post(requireAuth, addToHistory);
+router.route("/get_all_activity").get(requireAuth, getUserHistory);
 
 export default router;

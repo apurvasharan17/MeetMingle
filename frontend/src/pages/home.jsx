@@ -6,6 +6,7 @@ import { Button, IconButton, TextField } from '@mui/material';
 import RestoreIcon from '@mui/icons-material/Restore';
 import { AuthContext } from '../contexts/AuthContext';
 
+
 function HomeComponent() {
 
 
@@ -13,7 +14,7 @@ function HomeComponent() {
     const [meetingCode, setMeetingCode] = useState("");
 
 
-    const {addToUserHistory} = useContext(AuthContext);
+    const { addToUserHistory, handleLogout } = useContext(AuthContext);
     let handleJoinVideoCall = async () => {
         await addToUserHistory(meetingCode)
         navigate(`/${meetingCode}`)
@@ -39,12 +40,7 @@ function HomeComponent() {
                     </IconButton>
                     <p>History</p>
 
-                    <Button onClick={() => {
-                        localStorage.removeItem("token")
-                        navigate("/auth")
-                    }}>
-                        Logout
-                    </Button>
+                    <Button onClick={handleLogout}>Logout</Button>
                 </div>
 
 
