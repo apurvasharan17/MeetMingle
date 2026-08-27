@@ -504,7 +504,7 @@ export default function VideoMeetComponent() {
   const tileCount = remoteStreams.length + 1;
 
   return (
-    <div className={styles.shell}>
+    <div className={`${styles.shell} ${showChat ? styles.chatOpen : ""}`}>
       <div className={styles.stageWrap}>
         <div className={styles.stage} data-count={tileCount}>
           {remoteStreams.length === 0 && (
@@ -612,7 +612,18 @@ export default function VideoMeetComponent() {
       </div>
 
       {showChat && (
+        <button
+          type="button"
+          className={styles.scrim}
+          onClick={toggleChat}
+          aria-label="Close chat"
+        />
+      )}
+
+      {showChat && (
         <aside className={styles.chat}>
+          <span className={styles.grip} aria-hidden="true" />
+
           <div className={styles.chatHead}>
             <h2>Chat</h2>
             <button
