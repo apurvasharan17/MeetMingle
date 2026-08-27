@@ -1,13 +1,9 @@
 import React, { useContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import Card from "@mui/material/Card";
-import CardContent from "@mui/material/CardContent";
-import Typography from "@mui/material/Typography";
-import HomeIcon from "@mui/icons-material/Home";
-import { IconButton } from "@mui/material";
 
 import withAuth from "../utils/withAuth";
 import { AuthContext } from "../contexts/AuthContext";
+import "../App.css";
 
 function History() {
     const { getHistoryOfUser } = useContext(AuthContext);
@@ -40,35 +36,68 @@ function History() {
         const date = new Date(dateString);
         if (Number.isNaN(date.getTime())) return "Unknown date";
 
-        const day = date.getDate().toString().padStart(2, "0");
-        const month = (date.getMonth() + 1).toString().padStart(2, "0");
-        return `${day}/${month}/${date.getFullYear()}`;
+        return date.toLocaleDateString(undefined, {
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+        });
     };
 
     return (
-        <div style={{ padding: 16 }}>
-            <IconButton onClick={() => navigate("/home")} aria-label="Home">
-                <HomeIcon />
-            </IconButton>
+        <div className="mmShell">
+            <div className="mmAperture" aria-hidden="true" />
 
-            {status === "loading" && <p>Loading your meetings…</p>}
-            {status === "error" && <p>Could not load your history. Please try again.</p>}
-            {status === "done" && meetings.length === 0 && <p>No meetings yet.</p>}
+            <nav className="mmNav">
+                <span className="mmMark">
+                    <img src="/MMLogo.png" alt="" />
+                    <em>Meet</em>Mingle
+                </span>
 
-            {meetings.map((meeting) => (
-                // key belongs on the outermost element of the map, and the
-                // database id is stable where the array index is not.
-                <Card key={meeting._id} variant="outlined" sx={{ mb: 1.5 }}>
-                    <CardContent>
-                        <Typography sx={{ fontSize: 14 }} color="text.secondary" gutterBottom>
-                            Code: {meeting.meetingCode}
-                        </Typography>
-                        <Typography sx={{ mb: 1.5 }} color="text.secondary">
-                            Date: {formatDate(meeting.date)}
-                        </Typography>
-                    </CardContent>
-                </Card>
-            ))}
+                <div className="mmNavLinks">
+                    <button type="button" className="mmLink" onClick={() => navigate("/home")}>
+                        Back to home
+                    </button>
+                </div>
+            </nav>
+
+            <main className="mmHistory">
+                <h1 className="mmHistoryTitle">Your meetings</h1>
+                <p className="mmHistoryLead">Rooms you've joined, most recent first.</p>
+
+                {status === "loading" && <div className="mmBlank">Loading your meetings…</div>}
+
+                {status === "error" && (
+                    <div className="mmBlank">
+                        <strong>Couldn't load your history</strong>
+                        Reload the page to try again.
+                    </div>
+                )}
+
+                {status === "done" && meetings.length === 0 && (
+                    <div className="mmBlank">
+                        <strong>No meetings yet</strong>
+                        Join a room and it'll show up here.
+                    </div>
+                )}
+
+                {meetings.map((meeting) => (
+                    // key belongs on the outermost element of the map, and the
+                    // database id is stable where the array index is not.
+                    <div key={meeting._id} className="mmRow">
+                        <div>
+                            <p className="mmRowCode">{meeting.meetingCode}</p>
+                            <p className="mmRowDate">{formatDate(meeting.date)}</p>
+                        </div>
+                        <button
+                            type="button"
+                            className="mmBtn mmBtnGhost"
+                            onClick={() => navigate(`/${meeting.meetingCode}`)}
+                        >
+                            Rejoin
+                        </button>
+                    </div>
+                ))}
+            </main>
         </div>
     );
 }

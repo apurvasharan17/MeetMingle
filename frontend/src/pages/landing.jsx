@@ -1,5 +1,5 @@
 import React from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import "../App.css";
 
 // Guests get a fresh random room instead of everyone landing in the same
@@ -10,46 +10,59 @@ export default function LandingPage() {
     const navigate = useNavigate();
 
     return (
-        <div className="landingPageContainer">
-            <nav>
-                <div className="navHeader">
-                    <h2>
-                        {/* Absolute path, so it resolves the same on nested routes. */}
-                        <img src="/MMLogo.png" alt="" style={{ height: "25px", width: "25px" }} />
-                        <span style={{ color: "orange" }}>Meet</span>Mingle
-                    </h2>
-                </div>
+        <div className="mmShell">
+            <div className="mmAperture" aria-hidden="true" />
 
-                <div className="navlist">
-                    <p role="button" onClick={() => navigate(`/${randomRoomCode()}`)}>
-                        Join as Guest
-                    </p>
-                    <p role="button" onClick={() => navigate("/auth")}>
-                        Register
-                    </p>
-                    <div role="button" onClick={() => navigate("/auth")}>
-                        <p>Login</p>
-                    </div>
+            <nav className="mmNav">
+                <span className="mmMark">
+                    <img src="/MMLogo.png" alt="" />
+                    <em>Meet</em>Mingle
+                </span>
+
+                <div className="mmNavLinks">
+                    <button
+                        type="button"
+                        className="mmLink"
+                        onClick={() => navigate(`/${randomRoomCode()}`)}
+                    >
+                        Join as guest
+                    </button>
+                    <button type="button" className="mmLink" onClick={() => navigate("/auth")}>
+                        Sign in
+                    </button>
                 </div>
             </nav>
 
-            <div className="landingMainContainer">
-                <div className="description">
-                    <h1>
-                        <span style={{ color: "#FF9839" }}>Connect</span> with your loved ones
+            <main className="mmHero">
+                <div>
+                    <p className="mmEyebrow">Video calls, no download</p>
+
+                    <h1 className="mmHeadline">
+                        <em>Connect</em> with your loved ones
                     </h1>
 
-                    <p>Cover the distance with a MeetMingle video call</p>
+                    <p className="mmSub">
+                        Share a link, and everyone lands in the same room. Nothing to install.
+                    </p>
 
-                    <div role="button">
-                        <Link to="/auth">Get Started</Link>
+                    <div className="mmHeroActions">
+                        <button type="button" className="mmBtn" onClick={() => navigate("/auth")}>
+                            Get started
+                        </button>
+                        <button
+                            type="button"
+                            className="mmBtn mmBtnGhost"
+                            onClick={() => navigate(`/${randomRoomCode()}`)}
+                        >
+                            Start a call now
+                        </button>
                     </div>
                 </div>
 
-                <div>
+                <div className="mmHeroArt">
                     <img src="/mobile.png" alt="" />
                 </div>
-            </div>
+            </main>
         </div>
     );
 }

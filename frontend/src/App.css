@@ -1,129 +1,619 @@
-.landingPageContainer {
-  width: 100vw;
-  height: 100vh;
-  background: url("/public/background.png");
-  background-repeat: no-repeat;
-  background-size: cover;
-  color: white;
+/* ============================================================
+   MeetMingle — global styles
+   One palette across every screen: deep navy field, ember accent
+   used only for actions and state. The aperture ring motif comes
+   from the logo mark and recurs as ambient light behind content.
+   ============================================================ */
+
+   :root {
+    --ink: #06091f;
+    --stage: #0a0e2a;
+    --surface: #141a3f;
+    --surface-hi: #1c2352;
+    --line: #2a3160;
+    --ember: #ff8a3d;
+    --ember-ink: #1a0d02;
+    --text: #eef0fa;
+    --muted: #8d95c2;
+    --danger: #f4574f;
+
+    --display: "Bricolage Grotesque", "Inter", system-ui, sans-serif;
+    --body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+
+    --page: min(1180px, 100% - 3rem);
 }
 
-.landingPageContainer nav {
-  padding-inline: 1.2rem;
-  padding-block: 1.6rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-
+* {
+    box-sizing: border-box;
 }
 
-.landingPageContainer nav h2 {
-  font-size: 1.8rem;
-  font-weight: 500;
+body {
+    margin: 0;
+    background: var(--ink);
+    color: var(--text);
+    font-family: var(--body);
+    -webkit-font-smoothing: antialiased;
 }
 
-.landingPageContainer nav .navlist {
-  display: flex;
-  gap: 1.6rem;
-  cursor: pointer;
-
+.App {
+    min-height: 100vh;
 }
 
-.landingMainContainer {
-  display: flex;
-  justify-content: space-between;
-  padding-inline: 3rem;
-  height: 80vh;
-  align-items: center;
+/* ---------- Shared primitives ---------- */
+
+.mmShell {
+    min-height: 100vh;
+    background: var(--ink);
+    color: var(--text);
+    position: relative;
+    overflow-x: hidden;
 }
 
-.landingMainContainer>div:nth-child(1) {
-  font-size: 2.2rem;
+/* The aperture: concentric rings echoing the logo mark, sitting
+   behind content as ambient light rather than decoration. */
+.mmAperture {
+    position: absolute;
+    top: -30vh;
+    right: -18vw;
+    width: min(120vh, 1000px);
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background:
+        radial-gradient(circle, rgba(255, 138, 61, 0.14) 0%, transparent 62%),
+        radial-gradient(circle, rgba(96, 84, 220, 0.16) 0%, transparent 55%);
+    pointer-events: none;
+    z-index: 0;
 }
 
-.landingMainContainer>div:nth-child(1) div[role='button'] {
-  background: #D97500;
-  width: fit-content;
-  padding: 1rem;
-  border-radius: 20px;
-  margin-top: 1.9rem;
+.mmAperture::before,
+.mmAperture::after {
+    content: "";
+    position: absolute;
+    inset: 18%;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.045);
 }
 
-.landingMainContainer>div:nth-child(1) div[role='button'] a {
-  text-decoration: none;
-  color: white;
-  font-size: 1.7rem;
+.mmAperture::after {
+    inset: 34%;
 }
 
-.landingMainContainer>div:nth-child(2) img {
-  height: 70vh;
-  width: auto;
-}
-
-.navBar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding-inline: 20px;
-  text-align: center;
-
-}
-.meetContainer {
-  display: flex;
-  padding-inline: 20px;
-  height: 80vh;
-  gap: 10vw;
-  justify-content: center;
-}
-
-
-
-.leftPanel {
-  height: 100%;
-  display: flex;
-  align-items: center;
-
-}
-
-.rightPanel {
-  display: flex;
-  align-items: center;
-}
-
-.rightPanel > img {
-  width: 30vw;
-  height: auto;
-  border-radius: 20px;
-}
-
-@media (max-width:500px){
-  /* .landingPageContainer{
-    flex-direction: column;
-    justify-content: center;
+.mmNav {
+    position: relative;
+    z-index: 2;
+    width: var(--page);
+    margin-inline: auto;
+    display: flex;
     align-items: center;
-    width: 100vw;
-    height: 200%;
-  } */
-  nav{
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-  }
-  /* .landingMainContainer{
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-  } */
-  .landingMainContainer ,.landingMainContainer > .description{
-    flex-direction: column;
- 
-   }
-   .landingPageContainer {
-    width: 100vw;
-    height: 100vh;
-    background: url("/public/background.png");
-    background-repeat: repeat;
-    background-size: cover;
-    color: white;
-  }
+    justify-content: space-between;
+    gap: 1rem;
+    padding-block: 1.4rem;
+}
 
+.mmMark {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    font-family: var(--display);
+    font-size: 1.3rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--text);
+    text-decoration: none;
+}
+
+.mmMark img {
+    width: 26px;
+    height: 26px;
+}
+
+.mmMark em {
+    font-style: normal;
+    color: var(--ember);
+}
+
+.mmNavLinks {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.mmLink {
+    appearance: none;
+    border: 0;
+    background: none;
+    color: var(--muted);
+    font-family: inherit;
+    font-size: 0.92rem;
+    padding: 0.55rem 0.85rem;
+    border-radius: 9px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: color 0.15s ease, background 0.15s ease;
+}
+
+.mmLink:hover {
+    color: var(--text);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.mmBtn {
+    appearance: none;
+    border: 0;
+    border-radius: 11px;
+    padding: 0.82rem 1.4rem;
+    background: var(--ember);
+    color: var(--ember-ink);
+    font-family: inherit;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    white-space: nowrap;
+    transition: background 0.15s ease, transform 0.12s ease;
+}
+
+.mmBtn:hover {
+    background: #ff9c5c;
+}
+
+.mmBtn:active {
+    transform: translateY(1px);
+}
+
+.mmBtn:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+
+.mmBtnGhost {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--line);
+}
+
+.mmBtnGhost:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.mmField {
+    width: 100%;
+    padding: 0.85rem 1rem;
+    border-radius: 11px;
+    border: 1px solid var(--line);
+    background: rgba(255, 255, 255, 0.035);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 0.95rem;
+    transition: border-color 0.15s ease;
+}
+
+.mmField::placeholder {
+    color: var(--muted);
+}
+
+.mmField:focus {
+    outline: none;
+    border-color: var(--ember);
+}
+
+.mmLabel {
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 0.45rem;
+}
+
+.mmHint {
+    font-size: 0.82rem;
+    color: var(--muted);
+    margin: 0.4rem 0 0;
+}
+
+.mmError {
+    font-size: 0.86rem;
+    color: #ff9b95;
+    margin: 0.6rem 0 0;
+}
+
+:focus-visible {
+    outline: 2px solid var(--ember);
+    outline-offset: 2px;
+}
+
+/* ---------- Landing ---------- */
+
+.mmHero {
+    position: relative;
+    z-index: 1;
+    width: var(--page);
+    margin-inline: auto;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: center;
+    gap: 3rem;
+    padding-block: clamp(2rem, 7vh, 6rem);
+    min-height: calc(100vh - 6rem);
+}
+
+.mmEyebrow {
+    margin: 0 0 1.1rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--ember);
+}
+
+.mmHeadline {
+    margin: 0;
+    font-family: var(--display);
+    /* Wraps on its own terms instead of orphaning a word. */
+    font-size: clamp(2.4rem, 5.6vw, 4.2rem);
+    font-weight: 700;
+    line-height: 1.02;
+    letter-spacing: -0.035em;
+    text-wrap: balance;
+}
+
+.mmHeadline em {
+    font-style: normal;
+    color: var(--ember);
+}
+
+.mmSub {
+    margin: 1.2rem 0 2rem;
+    font-size: clamp(1rem, 1.6vw, 1.15rem);
+    line-height: 1.55;
+    color: var(--muted);
+    max-width: 34ch;
+}
+
+.mmHeroActions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    align-items: center;
+}
+
+.mmHeroArt {
+    justify-self: end;
+    width: 100%;
+    max-width: 560px;
+}
+
+.mmHeroArt img {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+/* ---------- Auth ---------- */
+
+.mmAuth {
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: 1.05fr 0.95fr;
+    background: var(--ink);
+}
+
+.mmAuthAside {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 2.4rem;
+    overflow: hidden;
+    /* Image comes in as an inline style: CRA's bundler tries to resolve
+       absolute url() paths at build time and fails on public/ assets. */
+    background-color: var(--stage);
+}
+
+.mmAuthQuote {
+    position: relative;
+    z-index: 1;
+    max-width: 26ch;
+    font-family: var(--display);
+    font-size: clamp(1.6rem, 3vw, 2.4rem);
+    font-weight: 600;
+    line-height: 1.12;
+    letter-spacing: -0.03em;
+    margin: 0;
+}
+
+.mmAuthQuote em {
+    font-style: normal;
+    color: var(--ember);
+}
+
+.mmAuthMeta {
+    position: relative;
+    z-index: 1;
+    color: var(--muted);
+    font-size: 0.88rem;
+    margin: 0;
+}
+
+.mmAuthPanel {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2.4rem 1.5rem;
+}
+
+.mmAuthCard {
+    width: 100%;
+    max-width: 380px;
+}
+
+.mmAuthTitle {
+    margin: 0 0 0.4rem;
+    font-family: var(--display);
+    font-size: 1.7rem;
+    font-weight: 600;
+    letter-spacing: -0.025em;
+}
+
+.mmAuthLead {
+    margin: 0 0 1.8rem;
+    color: var(--muted);
+    font-size: 0.92rem;
+}
+
+/* Segmented switch reads as one control, not two competing buttons. */
+.mmSwitch {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3px;
+    padding: 3px;
+    margin-bottom: 1.6rem;
+    border-radius: 12px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+}
+
+.mmSwitch button {
+    appearance: none;
+    border: 0;
+    border-radius: 9px;
+    padding: 0.62rem;
+    background: transparent;
+    color: var(--muted);
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.mmSwitch button[aria-selected="true"] {
+    background: var(--surface-hi);
+    color: var(--text);
+}
+
+.mmStack {
+    display: flex;
+    flex-direction: column;
+    gap: 1.1rem;
+}
+
+.mmStack .mmBtn {
+    width: 100%;
+    margin-top: 0.4rem;
+}
+
+/* ---------- Home ---------- */
+
+.mmHome {
+    position: relative;
+    z-index: 1;
+    width: var(--page);
+    margin-inline: auto;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 0.9fr);
+    align-items: center;
+    gap: 3rem;
+    padding-block: clamp(2rem, 6vh, 5rem);
+    min-height: calc(100vh - 6rem);
+}
+
+.mmHomeTitle {
+    margin: 0 0 0.6rem;
+    font-family: var(--display);
+    font-size: clamp(1.9rem, 4vw, 2.8rem);
+    font-weight: 700;
+    line-height: 1.08;
+    letter-spacing: -0.03em;
+}
+
+.mmHomeLead {
+    margin: 0 0 1.8rem;
+    color: var(--muted);
+    font-size: 1rem;
+    max-width: 40ch;
+    line-height: 1.55;
+}
+
+.mmJoin {
+    display: flex;
+    gap: 0.6rem;
+    max-width: 440px;
+}
+
+.mmJoin .mmField {
+    flex: 1;
+    min-width: 0;
+}
+
+.mmHomeArt {
+    justify-self: end;
+    width: 100%;
+    max-width: 420px;
+}
+
+.mmHomeArt img {
+    width: 100%;
+    height: auto;
+    display: block;
+    border-radius: 18px;
+}
+
+/* ---------- History ---------- */
+
+.mmHistory {
+    position: relative;
+    z-index: 1;
+    width: min(720px, 100% - 3rem);
+    margin-inline: auto;
+    padding-block: 2.5rem 4rem;
+}
+
+.mmHistoryTitle {
+    margin: 0 0 0.4rem;
+    font-family: var(--display);
+    font-size: 1.9rem;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+}
+
+.mmHistoryLead {
+    margin: 0 0 2rem;
+    color: var(--muted);
+    font-size: 0.95rem;
+}
+
+.mmRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem 1.15rem;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--surface);
+    margin-bottom: 0.65rem;
+}
+
+.mmRowCode {
+    font-family: var(--display);
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    margin: 0;
+}
+
+.mmRowDate {
+    margin: 0.15rem 0 0;
+    font-size: 0.82rem;
+    color: var(--muted);
+}
+
+/* Empty and error states point at the next action. */
+.mmBlank {
+    padding: 3rem 1.5rem;
+    text-align: center;
+    border: 1px dashed var(--line);
+    border-radius: 14px;
+    color: var(--muted);
+}
+
+.mmBlank strong {
+    display: block;
+    color: var(--text);
+    font-size: 1.02rem;
+    margin-bottom: 0.35rem;
+}
+
+/* ---------- Narrow screens ---------- */
+
+@media (max-width: 880px) {
+    :root {
+        --page: min(1180px, 100% - 2rem);
+    }
+
+    .mmHero,
+    .mmHome {
+        grid-template-columns: 1fr;
+        gap: 2.2rem;
+        min-height: 0;
+        padding-block: 2rem 3.5rem;
+    }
+
+    /* Art follows the words on a phone — the pitch should land first. */
+    .mmHeroArt,
+    .mmHomeArt {
+        justify-self: center;
+        max-width: 420px;
+        order: 2;
+    }
+
+    .mmSub,
+    .mmHomeLead {
+        max-width: none;
+    }
+
+    .mmAuth {
+        grid-template-columns: 1fr;
+    }
+
+    .mmAuthAside {
+        min-height: 210px;
+        padding: 1.6rem;
+    }
+
+    .mmAuthQuote {
+        font-size: 1.35rem;
+    }
+
+    .mmAuthMeta {
+        display: none;
+    }
+
+    .mmAperture {
+        top: -22vh;
+        right: -45vw;
+        width: 130vw;
+    }
+}
+
+@media (max-width: 560px) {
+    .mmNav {
+        padding-block: 1rem;
+    }
+
+    .mmNavLinks {
+        gap: 0.1rem;
+    }
+
+    .mmLink {
+        padding: 0.5rem 0.55rem;
+        font-size: 0.86rem;
+    }
+
+    .mmJoin {
+        flex-direction: column;
+    }
+
+    .mmJoin .mmBtn {
+        width: 100%;
+    }
+
+    .mmRow {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    * {
+        transition: none !important;
+    }
 }

@@ -1,7 +1,5 @@
 import React, { useContext, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button, IconButton, TextField } from "@mui/material";
-import RestoreIcon from "@mui/icons-material/Restore";
 
 import withAuth from "../utils/withAuth";
 import { AuthContext } from "../contexts/AuthContext";
@@ -20,7 +18,7 @@ function HomeComponent() {
 
         // Matches the backend's validation in addToHistory
         if (!/^[a-zA-Z0-9_-]{4,64}$/.test(code)) {
-            setError("Meeting code must be 4-64 letters, numbers, - or _");
+            setError("Use 4-64 letters, numbers, dashes or underscores.");
             return;
         }
 
@@ -37,52 +35,64 @@ function HomeComponent() {
     };
 
     return (
-        <>
-            <div className="navBar">
-                <div style={{ display: "flex", alignItems: "center" }}>
-                    <h2>MeetMingle Video Call</h2>
+        <div className="mmShell">
+            <div className="mmAperture" aria-hidden="true" />
+
+            <nav className="mmNav">
+                <span className="mmMark">
+                    <img src="/MMLogo.png" alt="" />
+                    <em>Meet</em>Mingle
+                </span>
+
+                <div className="mmNavLinks">
+                    <button type="button" className="mmLink" onClick={() => navigate("/history")}>
+                        History
+                    </button>
+                    <button type="button" className="mmLink" onClick={handleLogout}>
+                        Log out
+                    </button>
                 </div>
+            </nav>
 
-                <div style={{ display: "flex", alignItems: "center" }}>
-                    <IconButton onClick={() => navigate("/history")} aria-label="History">
-                        <RestoreIcon />
-                    </IconButton>
-                    <p>History</p>
+            <main className="mmHome">
+                <div>
+                    <h1 className="mmHomeTitle">Start or join a meeting</h1>
+                    <p className="mmHomeLead">
+                        Enter a code you've been given, or make one up — whoever uses the same
+                        code lands in the same room.
+                    </p>
 
-                    <Button onClick={handleLogout}>Logout</Button>
-                </div>
-            </div>
-
-            <div className="meetContainer">
-                <div className="leftPanel">
-                    <div>
-                        <h2>Start or join a meeting</h2>
-
-                        <div style={{ display: "flex", gap: "10px" }}>
-                            <TextField
-                                value={meetingCode}
-                                onChange={(e) => {
-                                    setMeetingCode(e.target.value);
-                                    setError("");
-                                }}
-                                onKeyDown={(e) => e.key === "Enter" && handleJoinVideoCall()}
-                                label="Meeting Code"
-                                variant="outlined"
-                                error={Boolean(error)}
-                                helperText={error}
-                            />
-                            <Button onClick={handleJoinVideoCall} variant="contained" disabled={joining}>
-                                Join
-                            </Button>
-                        </div>
+                    <div className="mmJoin">
+                        <input
+                            className="mmField"
+                            value={meetingCode}
+                            onChange={(e) => {
+                                setMeetingCode(e.target.value);
+                                setError("");
+                            }}
+                            onKeyDown={(e) => e.key === "Enter" && handleJoinVideoCall()}
+                            placeholder="Meeting code"
+                            aria-label="Meeting code"
+                            aria-invalid={Boolean(error)}
+                        />
+                        <button
+                            type="button"
+                            className="mmBtn"
+                            onClick={handleJoinVideoCall}
+                            disabled={joining}
+                        >
+                            {joining ? "Joining…" : "Join"}
+                        </button>
                     </div>
+
+                    {error && <p className="mmError">{error}</p>}
                 </div>
 
-                <div className="rightPanel">
+                <div className="mmHomeArt">
                     <img src="/logo3.png" alt="" />
                 </div>
-            </div>
-        </>
+            </main>
+        </div>
     );
 }
 

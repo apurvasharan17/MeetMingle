@@ -1,57 +1,50 @@
-import * as React from "react";
-import Avatar from "@mui/material/Avatar";
-import Button from "@mui/material/Button";
-import CssBaseline from "@mui/material/CssBaseline";
-import TextField from "@mui/material/TextField";
-import Paper from "@mui/material/Paper";
-import Box from "@mui/material/Box";
-import Grid from "@mui/material/Grid";
-import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
-import { createTheme, ThemeProvider } from "@mui/material/styles";
-import { Snackbar } from "@mui/material";
+import React, { useContext, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import { AuthContext } from "../contexts/AuthContext";
-
-const defaultTheme = createTheme();
+import "../App.css";
 
 export default function Authentication() {
     // Initialised to "" rather than undefined, so the inputs are controlled
     // from the first render (React warns when they switch part-way).
-    const [username, setUsername] = React.useState("");
-    const [password, setPassword] = React.useState("");
-    const [name, setName] = React.useState("");
-    const [error, setError] = React.useState("");
-    const [message, setMessage] = React.useState("");
-    const [open, setOpen] = React.useState(false);
-    const [submitting, setSubmitting] = React.useState(false);
+    const [username, setUsername] = useState("");
+    const [password, setPassword] = useState("");
+    const [name, setName] = useState("");
+    const [error, setError] = useState("");
+    const [notice, setNotice] = useState("");
+    const [submitting, setSubmitting] = useState(false);
+    const [isSignUp, setIsSignUp] = useState(false);
 
-    // 0 = sign in, 1 = sign up
-    const [formState, setFormState] = React.useState(0);
+    const navigate = useNavigate();
+    const { handleRegister, handleLogin } = useContext(AuthContext);
 
-    const { handleRegister, handleLogin } = React.useContext(AuthContext);
+    const switchMode = (signUp) => {
+        setIsSignUp(signUp);
+        setError("");
+        setNotice("");
+    };
 
     const handleAuth = async () => {
         setError("");
+        setNotice("");
         setSubmitting(true);
 
         try {
-            if (formState === 0) {
-                await handleLogin(username, password);
-            } else {
-                const result = await handleRegister(name, username, password);
-                setMessage(result || "Registration successful");
-                setOpen(true);
+            if (isSignUp) {
+                await handleRegister(name, username, password);
+                setNotice("Account created. Sign in to continue.");
                 setName("");
-                setUsername("");
                 setPassword("");
-                setFormState(0);
+                setIsSignUp(false);
+            } else {
+                await handleLogin(username, password);
             }
         } catch (err) {
             // err.response is undefined on a network failure, which used to
             // throw a second error inside the catch block.
             setError(
                 err?.response?.data?.message ||
-                    "Could not reach the server. Please try again."
+                    "Can't reach the server. Check your connection and try again."
             );
         } finally {
             setSubmitting(false);
@@ -59,124 +52,118 @@ export default function Authentication() {
     };
 
     return (
-        <ThemeProvider theme={defaultTheme}>
-            <Grid container component="main" sx={{ height: "100vh" }}>
-                <CssBaseline />
-                <Grid
-                    item
-                    xs={false}
-                    sm={4}
-                    md={7}
-                    sx={{
-                        backgroundImage: "url(/background.png)",
-                        backgroundRepeat: "no-repeat",
-                        backgroundColor: (t) =>
-                            t.palette.mode === "light" ? t.palette.grey[50] : t.palette.grey[900],
-                        backgroundSize: "cover",
-                        backgroundPosition: "center",
-                    }}
-                />
-                <Grid item xs={12} sm={8} md={5} component={Paper} elevation={6} square>
-                    <Box
-                        sx={{
-                            my: 8,
-                            mx: 4,
-                            display: "flex",
-                            flexDirection: "column",
-                            alignItems: "center",
-                        }}
-                    >
-                        <Avatar sx={{ m: 1, bgcolor: "secondary.main" }}>
-                            <LockOutlinedIcon />
-                        </Avatar>
+        <div className="mmAuth">
+            <aside
+                className="mmAuthAside"
+                style={{
+                    backgroundImage:
+                        `linear-gradient(160deg, rgba(6,9,31,0.55), rgba(6,9,31,0.95)), url(${process.env.PUBLIC_URL}/background.png)`,
+                    backgroundSize: "cover",
+                    backgroundPosition: "center",
+                }}
+            >
+                <span className="mmMark" role="button" onClick={() => navigate("/")}>
+                    <img src="/MMLogo.png" alt="" />
+                    <em>Meet</em>Mingle
+                </span>
 
-                        <div>
-                            <Button
-                                variant={formState === 0 ? "contained" : "text"}
-                                onClick={() => {
-                                    setFormState(0);
-                                    setError("");
-                                }}
-                            >
-                                Sign In
-                            </Button>
-                            <Button
-                                variant={formState === 1 ? "contained" : "text"}
-                                onClick={() => {
-                                    setFormState(1);
-                                    setError("");
-                                }}
-                            >
-                                Sign Up
-                            </Button>
-                        </div>
+                <p className="mmAuthQuote">
+                    Cover the distance with a <em>single link</em>.
+                </p>
 
-                        <Box component="div" sx={{ mt: 1, width: "100%" }}>
-                            {formState === 1 && (
-                                <TextField
-                                    margin="normal"
-                                    required
-                                    fullWidth
+                <p className="mmAuthMeta">Rooms open the moment you join. No download, no waiting.</p>
+            </aside>
+
+            <div className="mmAuthPanel">
+                <div className="mmAuthCard">
+                    <h1 className="mmAuthTitle">{isSignUp ? "Create an account" : "Welcome back"}</h1>
+                    <p className="mmAuthLead">
+                        {isSignUp
+                            ? "You'll need one to keep your meeting history."
+                            : "Sign in to start or join a meeting."}
+                    </p>
+
+                    <div className="mmSwitch" role="tablist">
+                        <button
+                            type="button"
+                            role="tab"
+                            aria-selected={!isSignUp}
+                            onClick={() => switchMode(false)}
+                        >
+                            Sign in
+                        </button>
+                        <button
+                            type="button"
+                            role="tab"
+                            aria-selected={isSignUp}
+                            onClick={() => switchMode(true)}
+                        >
+                            Sign up
+                        </button>
+                    </div>
+
+                    <div className="mmStack">
+                        {isSignUp && (
+                            <div>
+                                <label className="mmLabel" htmlFor="name">
+                                    Full name
+                                </label>
+                                <input
+                                    className="mmField"
                                     id="name"
-                                    label="Full Name"
                                     name="name"
                                     value={name}
                                     autoComplete="name"
-                                    autoFocus
                                     onChange={(e) => setName(e.target.value)}
                                 />
-                            )}
+                            </div>
+                        )}
 
-                            <TextField
-                                margin="normal"
-                                required
-                                fullWidth
+                        <div>
+                            <label className="mmLabel" htmlFor="username">
+                                Username
+                            </label>
+                            <input
+                                className="mmField"
                                 id="username"
-                                label="Username"
                                 name="username"
                                 value={username}
                                 autoComplete="username"
                                 onChange={(e) => setUsername(e.target.value)}
                             />
+                        </div>
 
-                            <TextField
-                                margin="normal"
-                                required
-                                fullWidth
+                        <div>
+                            <label className="mmLabel" htmlFor="password">
+                                Password
+                            </label>
+                            <input
+                                className="mmField"
                                 id="password"
                                 name="password"
-                                label="Password"
                                 type="password"
                                 value={password}
-                                autoComplete={formState === 0 ? "current-password" : "new-password"}
-                                helperText={formState === 1 ? "At least 8 characters" : ""}
+                                autoComplete={isSignUp ? "new-password" : "current-password"}
                                 onChange={(e) => setPassword(e.target.value)}
                                 onKeyDown={(e) => e.key === "Enter" && handleAuth()}
                             />
+                            {isSignUp && <p className="mmHint">At least 8 characters.</p>}
+                        </div>
 
-                            {error && <p style={{ color: "red" }}>{error}</p>}
+                        {error && <p className="mmError">{error}</p>}
+                        {notice && <p className="mmHint">{notice}</p>}
 
-                            <Button
-                                type="button"
-                                fullWidth
-                                variant="contained"
-                                disabled={submitting}
-                                sx={{ mt: 3, mb: 2 }}
-                                onClick={handleAuth}
-                            >
-                                {formState === 0 ? "Login" : "Register"}
-                            </Button>
-                        </Box>
-                    </Box>
-                </Grid>
-            </Grid>
-
-            <Snackbar
-                open={open}
-                autoHideDuration={4000}
-                onClose={() => setOpen(false)}
-                message={message}
-            />
-        </ThemeProvider>
+                        <button
+                            type="button"
+                            className="mmBtn"
+                            disabled={submitting}
+                            onClick={handleAuth}
+                        >
+                            {submitting ? "Working…" : isSignUp ? "Create account" : "Sign in"}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
     );
 }
