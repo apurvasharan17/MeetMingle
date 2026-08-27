@@ -10,8 +10,20 @@ const connections = {};
 const messages = {};
 // socketId -> roomId, so disconnect is O(1) instead of scanning every room
 const socketRoom = {};
+// socketId -> { name, audio, video }
+const participants = {};
 
 const roomIsFull = (roomId) => (connections[roomId]?.length || 0) >= MAX_ROOM_SIZE;
+
+const rosterFor = (roomId) =>
+  (connections[roomId] || []).map((id) => ({
+    id,
+    name: participants[id]?.name || "Guest",
+    state: {
+      audio: participants[id]?.audio !== false,
+      video: participants[id]?.video !== false,
+    },
+  }));
 
 export const connectToSocket = (server, allowedOrigins = []) => {
   const io = new Server(server, {
@@ -23,7 +35,7 @@ export const connectToSocket = (server, allowedOrigins = []) => {
   });
 
   io.on("connection", (socket) => {
-    socket.on("join-call", (roomId) => {
+    socket.on("join-call", (roomId, displayName) => {
       if (typeof roomId !== "string" || !roomId.trim()) return;
       if (socketRoom[socket.id]) return; // already in a room
 
@@ -35,9 +47,15 @@ export const connectToSocket = (server, allowedOrigins = []) => {
       connections[roomId] = connections[roomId] || [];
       connections[roomId].push(socket.id);
       socketRoom[socket.id] = roomId;
+      participants[socket.id] = {
+        name: String(displayName || "Guest").slice(0, 40),
+        audio: true,
+        video: true,
+      };
       socket.join(roomId);
 
       io.to(roomId).emit("user-joined", socket.id, connections[roomId]);
+      io.to(roomId).emit("participants", rosterFor(roomId));
 
       // Replay history to the newcomer only
       (messages[roomId] || []).forEach((m) => {
@@ -51,13 +69,30 @@ export const connectToSocket = (server, allowedOrigins = []) => {
       io.to(toId).emit("signal", socket.id, message);
     });
 
+    // Mic/camera on-off, so the other tiles can show it.
+    socket.on("media-state", (state) => {
+      const roomId = socketRoom[socket.id];
+      if (!roomId || !state || typeof state !== "object") return;
+
+      const entry = participants[socket.id];
+      if (!entry) return;
+
+      if (typeof state.audio === "boolean") entry.audio = state.audio;
+      if (typeof state.video === "boolean") entry.video = state.video;
+
+      socket.to(roomId).emit("media-state", socket.id, {
+        audio: entry.audio,
+        video: entry.video,
+      });
+    });
+
     socket.on("chat-message", (data, sender) => {
       const roomId = socketRoom[socket.id];
       if (!roomId) return;
       if (typeof data !== "string" || !data.trim()) return;
 
       const entry = {
-        sender: String(sender || "Anonymous").slice(0, 64),
+        sender: String(sender || participants[socket.id]?.name || "Guest").slice(0, 64),
         data: data.slice(0, MAX_MESSAGE_LENGTH),
         socketIdSender: socket.id,
         at: Date.now(),
@@ -76,12 +111,14 @@ export const connectToSocket = (server, allowedOrigins = []) => {
       if (!roomId) return;
 
       delete socketRoom[socket.id];
+      delete participants[socket.id];
 
       const members = connections[roomId] || [];
       const index = members.indexOf(socket.id);
       if (index !== -1) members.splice(index, 1);
 
       socket.to(roomId).emit("user-left", socket.id);
+      socket.to(roomId).emit("participants", rosterFor(roomId));
 
       if (members.length === 0) {
         delete connections[roomId];

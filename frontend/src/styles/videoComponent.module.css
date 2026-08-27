@@ -1,149 +1,631 @@
-/* ---------- Lobby ---------- */
+/* ============================================================
+   MeetMingle — call surface
+   Palette keeps the existing navy/ember identity but darkens the
+   stage so faces carry the contrast instead of the chrome.
+   ============================================================ */
 
-.lobbyContainer {
+   .shell {
+    --ink: #06091f;
+    --stage: #0a0e2a;
+    --surface: #141a3f;
+    --surface-hi: #1c2352;
+    --line: #2a3160;
+    --ember: #ff8a3d;
+    --ember-soft: rgba(255, 138, 61, 0.16);
+    --danger: #f4574f;
+    --text: #eef0fa;
+    --muted: #8d95c2;
+
+    --radius: 14px;
+    --bar: 76px;
+
+    position: fixed;
+    inset: 0;
+    display: flex;
+    background: var(--ink);
+    color: var(--text);
+    font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+    overflow: hidden;
+}
+
+/* ---------- Stage ---------- */
+
+.stageWrap {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.stage {
+    flex: 1;
+    display: grid;
+    gap: 10px;
+    padding: 14px;
+    padding-bottom: calc(var(--bar) + 14px);
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+    grid-auto-rows: 1fr;
+    align-content: center;
+    justify-content: center;
+    overflow-y: auto;
+    max-width: 1500px;
+    width: 100%;
+    margin: 0 auto;
+}
+
+/* Two people is the common case — don't stretch a lone tile edge to edge. */
+.stage[data-count="1"],
+.stage[data-count="2"] {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr));
+}
+
+.tile {
+    position: relative;
+    background: var(--stage);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
+    aspect-ratio: 16 / 9;
+    min-height: 0;
+}
+
+.tile video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+/* Ember ring marks your own tile — the accent earns its place by
+   encoding state rather than decorating. */
+.selfTile {
+    border-color: var(--ember);
+}
+
+.nameTag {
+    position: absolute;
+    left: 10px;
+    bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    max-width: calc(100% - 20px);
+    padding: 5px 10px;
+    border-radius: 8px;
+    background: rgba(6, 9, 31, 0.72);
+    backdrop-filter: blur(8px);
+    font-size: 0.8rem;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.mutedDot {
+    display: inline-flex;
+    width: 16px;
+    height: 16px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: var(--danger);
+    flex: none;
+}
+
+.mutedDot svg {
+    width: 11px;
+    height: 11px;
+}
+
+/* Camera off: show initials rather than a dead black rectangle. */
+.avatar {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--stage);
+    font-size: clamp(1.6rem, 5vw, 2.6rem);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+}
+
+/* Self-view floats as picture-in-picture on desktop and drops into
+   the grid on narrow screens, where a floating tile covers a face. */
+.pip {
+    position: absolute;
+    right: 16px;
+    bottom: calc(var(--bar) + 16px);
+    width: clamp(150px, 18vw, 240px);
+    aspect-ratio: 16 / 9;
+    z-index: 3;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+}
+
+.pip video {
+    transform: scaleX(-1); /* mirror your own preview, not others' */
+}
+
+.empty {
+    grid-column: 1 / -1;
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
-    gap: 20px;
-    min-height: 100vh;
-    padding: 20px;
-    background: rgb(1, 4, 48);
-    color: white;
+    gap: 8px;
+    color: var(--muted);
+    text-align: center;
+    padding: 40px 20px;
 }
 
-.lobbyPreview {
-    width: min(90vw, 560px);
-    aspect-ratio: 16 / 9;
-    object-fit: cover;
-    border-radius: 12px;
-    background: #000;
+.empty strong {
+    color: var(--text);
+    font-size: 1.05rem;
+    font-weight: 600;
 }
 
-.lobbyControls {
+.empty span {
+    font-size: 0.88rem;
+}
+
+/* ---------- Control bar ---------- */
+
+.bar {
+    position: absolute;
+    left: 50%;
+    bottom: 16px;
+    transform: translateX(-50%);
+    z-index: 5;
     display: flex;
-    gap: 10px;
     align-items: center;
+    gap: 6px;
+    padding: 8px;
+    border-radius: 999px;
+    background: rgba(20, 26, 63, 0.86);
+    border: 1px solid var(--line);
+    backdrop-filter: blur(14px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
 }
 
-.lobbyControls :global(.MuiOutlinedInput-root) {
-    background: white;
-    border-radius: 4px;
-}
-
-/* ---------- Call ---------- */
-
-.meetVideoContainer {
-    position: relative;
-    height: 100vh;
-    overflow: hidden;
-    background: rgb(1, 4, 48);
-}
-
-.meetUserVideo {
-    position: absolute;
-    bottom: 12vh;
-    left: 16px;
-    height: 20vh;
-    width: auto;
-    max-width: 30vw;
-    border-radius: 12px;
-    object-fit: cover;
-    background: #000;
-    z-index: 2;
-}
-
-.conferenceView {
+.ctrl {
+    width: 46px;
+    height: 46px;
     display: grid;
-    /* Tiles reflow instead of overflowing once a third person joins. */
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 12px;
-    padding: 16px;
-    height: calc(100vh - 90px);
-    overflow-y: auto;
-    align-content: start;
+    place-items: center;
+    border: 0;
+    border-radius: 50%;
+    background: var(--surface-hi);
+    color: var(--text);
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
 }
 
-.remoteTile video {
-    width: 100%;
-    aspect-ratio: 16 / 9;
-    object-fit: cover;
-    border-radius: 10px;
-    background: #000;
+.ctrl:hover {
+    background: #252d66;
 }
 
-.waitingText {
-    color: #b8bdd8;
-    grid-column: 1 / -1;
-    text-align: center;
-    margin-top: 20vh;
+.ctrl:active {
+    transform: scale(0.94);
 }
 
-.buttonContainers {
+.ctrl:focus-visible {
+    outline: 2px solid var(--ember);
+    outline-offset: 2px;
+}
+
+.ctrl svg {
+    width: 21px;
+    height: 21px;
+}
+
+/* Off states read at a glance, without relying on icon shape alone. */
+.ctrlOff {
+    background: var(--danger);
+    color: #fff;
+}
+
+.ctrlOff:hover {
+    background: #d94840;
+}
+
+.ctrlActive {
+    background: var(--ember-soft);
+    color: var(--ember);
+}
+
+.hangup {
+    width: 62px;
+    border-radius: 999px;
+    background: var(--danger);
+    color: #fff;
+    margin-inline: 4px;
+}
+
+.hangup:hover {
+    background: #d94840;
+}
+
+.badge {
+    position: relative;
+}
+
+.badge[data-count]:not([data-count="0"])::after {
+    content: attr(data-count);
     position: absolute;
-    width: 100%;
-    bottom: 0;
-    padding: 10px 0;
+    top: -2px;
+    right: -2px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 4px;
+    border-radius: 999px;
+    background: var(--ember);
+    color: #1a0d02;
+    font-size: 0.68rem;
+    font-weight: 700;
+    line-height: 18px;
     text-align: center;
-    background: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent);
-    z-index: 3;
 }
 
-.buttonContainers svg {
-    font-size: 2.2rem;
+.divider {
+    width: 1px;
+    height: 26px;
+    background: var(--line);
+    margin-inline: 2px;
 }
 
 /* ---------- Chat ---------- */
 
-.chatRoom {
-    position: absolute;
-    top: 0;
-    right: 0;
-    height: 100vh;
-    width: min(90vw, 360px);
-    background: white;
-    padding: 16px;
-    box-shadow: -2px 0 12px rgba(0, 0, 0, 0.3);
-    z-index: 4;
-}
-
-.chatContainer {
+/* Side panel on desktop: the stage shrinks rather than being covered. */
+.chat {
+    width: 340px;
+    flex: none;
     display: flex;
     flex-direction: column;
-    height: 100%;
-    gap: 12px;
+    background: var(--surface);
+    border-left: 1px solid var(--line);
 }
 
-/* Was position:absolute, which sat on top of the message list. */
-.chattingDisplay {
+.chatHead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--line);
+}
+
+.chatHead h2 {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+
+.chatClose {
+    border: 0;
+    background: none;
+    color: var(--muted);
+    cursor: pointer;
+    padding: 4px;
+    line-height: 0;
+    border-radius: 6px;
+}
+
+.chatClose:hover {
+    color: var(--text);
+}
+
+.log {
     flex: 1;
     overflow-y: auto;
-    padding-right: 4px;
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
 }
 
-.chatMessage {
-    margin-bottom: 16px;
+.msg {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
     word-break: break-word;
 }
 
-.chatSender {
-    font-weight: bold;
-    margin: 0 0 2px;
+.msgWho {
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ember);
 }
 
-.chattingArea {
+.msg p {
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.45;
+    color: var(--text);
+}
+
+.mine .msgWho {
+    color: var(--muted);
+}
+
+.logEmpty {
+    margin: auto;
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.85rem;
+}
+
+.composer {
     display: flex;
     gap: 8px;
-    align-items: center;
+    padding: 14px 18px;
+    border-top: 1px solid var(--line);
 }
 
-@media (max-width: 600px) {
-    .meetUserVideo {
-        height: 14vh;
-        bottom: 14vh;
+.composer input {
+    flex: 1;
+    min-width: 0;
+    padding: 11px 13px;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    background: var(--ink);
+    color: var(--text);
+    font-size: 0.9rem;
+    font-family: inherit;
+}
+
+.composer input::placeholder {
+    color: var(--muted);
+}
+
+.composer input:focus {
+    outline: none;
+    border-color: var(--ember);
+}
+
+.send {
+    border: 0;
+    border-radius: 10px;
+    padding: 0 16px;
+    background: var(--ember);
+    color: #1a0d02;
+    font-weight: 600;
+    font-size: 0.88rem;
+    font-family: inherit;
+    cursor: pointer;
+}
+
+.send:hover {
+    background: #ff9c5c;
+}
+
+.send:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+
+/* ---------- Lobby ---------- */
+
+.lobby {
+    position: fixed;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    background:
+        radial-gradient(120% 90% at 50% -10%, #171f4d 0%, #06091f 60%);
+    color: #eef0fa;
+    font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+    overflow-y: auto;
+}
+
+.lobbyCard {
+    width: 100%;
+    max-width: 560px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.eyebrow {
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: #ff8a3d;
+    margin: 0;
+}
+
+.lobbyTitle {
+    margin: 0;
+    font-size: clamp(1.5rem, 4.5vw, 2.1rem);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+}
+
+.lobbyRoom {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #8d95c2;
+}
+
+.lobbyRoom code {
+    color: #eef0fa;
+    background: rgba(255, 255, 255, 0.07);
+    padding: 2px 7px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+}
+
+.preview {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    border-radius: 16px;
+    overflow: hidden;
+    background: #0a0e2a;
+    border: 1px solid #2a3160;
+}
+
+.preview video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform: scaleX(-1);
+}
+
+.previewOff {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    color: #8d95c2;
+    font-size: 0.9rem;
+    background: #0a0e2a;
+}
+
+.previewControls {
+    position: absolute;
+    left: 50%;
+    bottom: 12px;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 8px;
+}
+
+.lobbyForm {
+    display: flex;
+    gap: 10px;
+}
+
+.lobbyForm input {
+    flex: 1;
+    min-width: 0;
+    padding: 13px 15px;
+    border-radius: 12px;
+    border: 1px solid #2a3160;
+    background: rgba(255, 255, 255, 0.04);
+    color: #eef0fa;
+    font-size: 0.95rem;
+    font-family: inherit;
+}
+
+.lobbyForm input::placeholder {
+    color: #8d95c2;
+}
+
+.lobbyForm input:focus {
+    outline: none;
+    border-color: #ff8a3d;
+}
+
+.join {
+    border: 0;
+    border-radius: 12px;
+    padding: 0 26px;
+    background: #ff8a3d;
+    color: #1a0d02;
+    font-weight: 600;
+    font-size: 0.95rem;
+    font-family: inherit;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.join:hover {
+    background: #ff9c5c;
+}
+
+.join:focus-visible,
+.lobbyForm input:focus-visible {
+    outline: 2px solid #ff8a3d;
+    outline-offset: 2px;
+}
+
+/* ---------- Toast ---------- */
+
+.toast {
+    position: fixed;
+    left: 50%;
+    bottom: calc(var(--bar) + 26px);
+    transform: translateX(-50%);
+    z-index: 20;
+    max-width: min(92vw, 440px);
+    padding: 12px 16px;
+    border-radius: 10px;
+    background: #141a3f;
+    border: 1px solid #2a3160;
+    color: #eef0fa;
+    font-size: 0.88rem;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+}
+
+/* ---------- Narrow screens ---------- */
+
+@media (max-width: 760px) {
+    .shell {
+        --bar: 68px;
+        flex-direction: column;
     }
 
-    .buttonContainers svg {
-        font-size: 1.8rem;
+    .stage {
+        padding: 10px;
+        padding-bottom: calc(var(--bar) + 12px);
+        gap: 8px;
+        grid-template-columns: 1fr;
+        align-content: start;
+    }
+
+    .stage[data-count="1"],
+    .stage[data-count="2"] {
+        grid-template-columns: 1fr;
+    }
+
+    /* Self-view rejoins the flow so it stops sitting on someone's face. */
+    .pip {
+        position: static;
+        width: auto;
+        box-shadow: none;
+        order: -1;
+    }
+
+    .bar {
+        bottom: 10px;
+        gap: 4px;
+        padding: 6px;
+    }
+
+    .ctrl {
+        width: 42px;
+        height: 42px;
+    }
+
+    .hangup {
+        width: 56px;
+    }
+
+    /* Chat becomes a sheet over the lower half rather than a side rail. */
+    .chat {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        top: auto;
+        width: auto;
+        height: 68vh;
+        border-left: 0;
+        border-top: 1px solid var(--line);
+        border-radius: 16px 16px 0 0;
+        z-index: 10;
+        box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.5);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ctrl {
+        transition: none;
     }
 }

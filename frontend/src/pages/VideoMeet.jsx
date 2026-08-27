@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import io from "socket.io-client";
 
-import { Badge, Button, IconButton, TextField, Snackbar } from "@mui/material";
 import VideocamIcon from "@mui/icons-material/Videocam";
 import VideocamOffIcon from "@mui/icons-material/VideocamOff";
 import CallEndIcon from "@mui/icons-material/CallEnd";
@@ -11,6 +10,7 @@ import MicOffIcon from "@mui/icons-material/MicOff";
 import ScreenShareIcon from "@mui/icons-material/ScreenShare";
 import StopScreenShareIcon from "@mui/icons-material/StopScreenShare";
 import ChatIcon from "@mui/icons-material/Chat";
+import CloseIcon from "@mui/icons-material/Close";
 
 import styles from "../styles/videoComponent.module.css";
 import server from "../environment";
@@ -34,6 +34,15 @@ const peerConfig = {
   ],
 };
 
+const initials = (name) =>
+  (name || "?")
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase();
+
 export default function VideoMeetComponent() {
   const { url: roomId } = useParams();
   const navigate = useNavigate();
@@ -41,13 +50,16 @@ export default function VideoMeetComponent() {
   const socketRef = useRef(null);
   const socketIdRef = useRef(null);
   const localVideoRef = useRef(null);
+  const lobbyVideoRef = useRef(null);
   const localStreamRef = useRef(null);
   const screenStreamRef = useRef(null);
+  const logRef = useRef(null);
 
   // socketId -> { pc, pendingCandidates: [] }
   const peersRef = useRef({});
 
   const [remoteStreams, setRemoteStreams] = useState([]);
+  const [peers, setPeers] = useState({}); // socketId -> { name, audio, video }
   const [inLobby, setInLobby] = useState(true);
   const [username, setUsername] = useState("");
 
@@ -87,9 +99,11 @@ export default function VideoMeetComponent() {
         }
 
         localStreamRef.current = stream;
-        if (localVideoRef.current) localVideoRef.current.srcObject = stream;
+        [lobbyVideoRef, localVideoRef].forEach((ref) => {
+          if (ref.current) ref.current.srcObject = stream;
+        });
       } catch (e) {
-        setToast("Could not access your camera or microphone. Check browser permissions.");
+        setToast("Camera and microphone are blocked. Allow access in your browser, then reload.");
       }
     };
 
@@ -99,13 +113,18 @@ export default function VideoMeetComponent() {
     };
   }, []);
 
-  // Re-attach the stream whenever the local <video> element remounts
-  // (leaving the lobby swaps in a different element).
+  // Re-attach the stream whenever the video element remounts (leaving the
+  // lobby swaps in a different element).
   useEffect(() => {
-    if (localVideoRef.current && localStreamRef.current) {
-      localVideoRef.current.srcObject = localStreamRef.current;
+    const ref = inLobby ? lobbyVideoRef : localVideoRef;
+    if (ref.current && localStreamRef.current && !screenStreamRef.current) {
+      ref.current.srcObject = localStreamRef.current;
     }
   }, [inLobby]);
+
+  useEffect(() => {
+    if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
+  }, [messages, showChat]);
 
   /* ------------------------------------------------------------------ */
   /* Peer connections                                                    */
@@ -121,6 +140,11 @@ export default function VideoMeetComponent() {
       delete peersRef.current[peerId];
     }
     setRemoteStreams((prev) => prev.filter((r) => r.socketId !== peerId));
+    setPeers((prev) => {
+      const next = { ...prev };
+      delete next[peerId];
+      return next;
+    });
   }, []);
 
   const createPeerConnection = useCallback(
@@ -222,55 +246,76 @@ export default function VideoMeetComponent() {
   );
 
   const addChatMessage = useCallback((data, sender, senderSocketId) => {
-    setMessages((prev) => [...prev, { sender, data }]);
+    setMessages((prev) => [...prev, { sender, data, mine: senderSocketId === socketIdRef.current }]);
     if (senderSocketId !== socketIdRef.current) {
       setUnreadCount((prev) => prev + 1);
     }
   }, []);
 
-  const connectToSocketServer = useCallback(() => {
-    const socket = io(server, { transports: ["websocket", "polling"] });
-    socketRef.current = socket;
+  const connectToSocketServer = useCallback(
+    (displayName) => {
+      const socket = io(server, { transports: ["websocket", "polling"] });
+      socketRef.current = socket;
 
-    socket.on("connect", () => {
-      socketIdRef.current = socket.id;
-      // Uses the route param, not window.location.href — the full URL meant
-      // /room and /room?x=1 were treated as two different rooms.
-      socket.emit("join-call", roomId);
-    });
+      socket.on("connect", () => {
+        socketIdRef.current = socket.id;
+        // Uses the route param, not window.location.href — the full URL meant
+        // /room and /room?x=1 were treated as two different rooms.
+        socket.emit("join-call", roomId, displayName);
+      });
 
-    socket.on("connect_error", () => setToast("Cannot reach the meeting server."));
+      socket.on("connect_error", () =>
+        setToast("Can't reach the meeting server. Check your connection.")
+      );
 
-    socket.on("room-full", ({ max }) => {
-      setToast(`This room is full (max ${max} participants).`);
-      navigate("/home");
-    });
+      socket.on("room-full", ({ max }) => {
+        setToast(`This room is full — it holds ${max} people.`);
+        navigate("/home");
+      });
 
-    socket.on("signal", handleSignal);
-    socket.on("chat-message", addChatMessage);
-    socket.on("user-left", (id) => removePeer(id));
+      socket.on("signal", handleSignal);
+      socket.on("chat-message", addChatMessage);
+      socket.on("user-left", (id) => removePeer(id));
 
-    socket.on("user-joined", (joinedId, clients) => {
-      if (joinedId === socketIdRef.current) {
-        // We just arrived: open a connection to everyone already here and
-        // wait for their offers. Only one side offers, which avoids the glare
-        // that broke the old code once a third participant joined.
-        clients
-          .filter((id) => id !== socketIdRef.current)
-          .forEach((id) => createPeerConnection(id));
-        return;
-      }
+      // Names and mute state for everyone in the room.
+      socket.on("participants", (list) => {
+        setPeers((prev) => {
+          const next = {};
+          list.forEach((p) => {
+            if (p.id === socketIdRef.current) return;
+            next[p.id] = { name: p.name, ...(prev[p.id] || {}), ...(p.state || {}) };
+          });
+          return next;
+        });
+      });
 
-      // Someone else arrived: we send them the offer.
-      const pc = createPeerConnection(joinedId);
-      pc.createOffer()
-        .then((offer) => pc.setLocalDescription(offer))
-        .then(() => {
-          socket.emit("signal", joinedId, JSON.stringify({ sdp: pc.localDescription }));
-        })
-        .catch((e) => console.error("Offer failed", e));
-    });
-  }, [roomId, handleSignal, addChatMessage, createPeerConnection, removePeer, navigate]);
+      socket.on("media-state", (id, state) => {
+        setPeers((prev) => ({ ...prev, [id]: { ...(prev[id] || {}), ...state } }));
+      });
+
+      socket.on("user-joined", (joinedId, clients) => {
+        if (joinedId === socketIdRef.current) {
+          // We just arrived: open a connection to everyone already here and
+          // wait for their offers. Only one side offers, which avoids the
+          // glare that broke the old code once a third participant joined.
+          clients
+            .filter((id) => id !== socketIdRef.current)
+            .forEach((id) => createPeerConnection(id));
+          return;
+        }
+
+        // Someone else arrived: we send them the offer.
+        const pc = createPeerConnection(joinedId);
+        pc.createOffer()
+          .then((offer) => pc.setLocalDescription(offer))
+          .then(() => {
+            socket.emit("signal", joinedId, JSON.stringify({ sdp: pc.localDescription }));
+          })
+          .catch((e) => console.error("Offer failed", e));
+      });
+    },
+    [roomId, handleSignal, addChatMessage, createPeerConnection, removePeer, navigate]
+  );
 
   /* ------------------------------------------------------------------ */
   /* Teardown                                                            */
@@ -300,13 +345,16 @@ export default function VideoMeetComponent() {
   /* ------------------------------------------------------------------ */
 
   const connect = () => {
-    if (!username.trim()) {
-      setToast("Please enter a display name.");
+    const name = username.trim();
+    if (!name) {
+      setToast("Add a name so people know who joined.");
       return;
     }
     setInLobby(false);
-    connectToSocketServer();
+    connectToSocketServer(name);
   };
+
+  const broadcastState = (state) => socketRef.current?.emit("media-state", state);
 
   // Flipping track.enabled is instant and needs no renegotiation. The old code
   // tore down and re-acquired the whole stream on every mute click.
@@ -315,6 +363,7 @@ export default function VideoMeetComponent() {
     if (!track) return;
     track.enabled = !track.enabled;
     setVideoEnabled(track.enabled);
+    broadcastState({ video: track.enabled });
   };
 
   const toggleAudio = () => {
@@ -322,6 +371,7 @@ export default function VideoMeetComponent() {
     if (!track) return;
     track.enabled = !track.enabled;
     setAudioEnabled(track.enabled);
+    broadcastState({ audio: track.enabled });
   };
 
   // replaceTrack swaps the outgoing video without renegotiating, so remote
@@ -388,135 +438,229 @@ export default function VideoMeetComponent() {
   };
 
   /* ------------------------------------------------------------------ */
-  /* Render                                                              */
+  /* Lobby                                                               */
   /* ------------------------------------------------------------------ */
 
   if (inLobby) {
     return (
-      <div className={styles.lobbyContainer}>
-        <h2>Enter into Lobby</h2>
+      <div className={styles.lobby}>
+        <div className={styles.lobbyCard}>
+          <div>
+            <p className={styles.eyebrow}>Ready to join</p>
+            <h1 className={styles.lobbyTitle}>Check yourself before you go in</h1>
+            <p className={styles.lobbyRoom}>
+              Room <code>{roomId}</code>
+            </p>
+          </div>
 
-        <video ref={localVideoRef} className={styles.lobbyPreview} autoPlay muted playsInline />
+          <div className={styles.preview}>
+            <video ref={lobbyVideoRef} autoPlay muted playsInline />
+            {!videoEnabled && <div className={styles.previewOff}>Camera is off</div>}
 
-        <div className={styles.lobbyControls}>
-          <TextField
-            label="Display name"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && connect()}
-            variant="outlined"
-            size="small"
-          />
-          <Button variant="contained" onClick={connect}>
-            Connect
-          </Button>
+            <div className={styles.previewControls}>
+              <button
+                type="button"
+                onClick={toggleAudio}
+                className={`${styles.ctrl} ${audioEnabled ? "" : styles.ctrlOff}`}
+                aria-label={audioEnabled ? "Turn off microphone" : "Turn on microphone"}
+              >
+                {audioEnabled ? <MicIcon /> : <MicOffIcon />}
+              </button>
+              <button
+                type="button"
+                onClick={toggleVideo}
+                className={`${styles.ctrl} ${videoEnabled ? "" : styles.ctrlOff}`}
+                aria-label={videoEnabled ? "Turn off camera" : "Turn on camera"}
+              >
+                {videoEnabled ? <VideocamIcon /> : <VideocamOffIcon />}
+              </button>
+            </div>
+          </div>
+
+          <div className={styles.lobbyForm}>
+            <input
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && connect()}
+              placeholder="Your name"
+              aria-label="Your name"
+              maxLength={40}
+            />
+            <button type="button" className={styles.join} onClick={connect}>
+              Join call
+            </button>
+          </div>
         </div>
 
-        <Snackbar
-          open={Boolean(toast)}
-          autoHideDuration={5000}
-          onClose={() => setToast("")}
-          message={toast}
-        />
+        {toast && <div className={styles.toast}>{toast}</div>}
       </div>
     );
   }
 
+  /* ------------------------------------------------------------------ */
+  /* Call                                                                */
+  /* ------------------------------------------------------------------ */
+
+  const tileCount = remoteStreams.length + 1;
+
   return (
-    <div className={styles.meetVideoContainer}>
-      {showChat && (
-        <div className={styles.chatRoom}>
-          <div className={styles.chatContainer}>
-            <h2>Chat</h2>
-
-            <div className={styles.chattingDisplay}>
-              {messages.length ? (
-                messages.map((item, index) => (
-                  <div key={index} className={styles.chatMessage}>
-                    <p className={styles.chatSender}>{item.sender}</p>
-                    <p>{item.data}</p>
-                  </div>
-                ))
-              ) : (
-                <p>No messages yet</p>
-              )}
+    <div className={styles.shell}>
+      <div className={styles.stageWrap}>
+        <div className={styles.stage} data-count={tileCount}>
+          {remoteStreams.length === 0 && (
+            <div className={styles.empty}>
+              <strong>You're the only one here</strong>
+              <span>Share the room link and they'll drop straight in.</span>
             </div>
+          )}
 
-            <div className={styles.chattingArea}>
-              <TextField
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-                label="Enter your message"
-                variant="outlined"
-                size="small"
-                fullWidth
-              />
-              <Button variant="contained" onClick={sendMessage}>
-                Send
-              </Button>
+          {remoteStreams.map((remote) => {
+            const peer = peers[remote.socketId] || {};
+            const name = peer.name || "Guest";
+            return (
+              <div key={remote.socketId} className={styles.tile}>
+                <video
+                  data-socket={remote.socketId}
+                  ref={(el) => {
+                    if (el && el.srcObject !== remote.stream) el.srcObject = remote.stream;
+                  }}
+                  autoPlay
+                  playsInline
+                />
+                {peer.video === false && <div className={styles.avatar}>{initials(name)}</div>}
+                <div className={styles.nameTag}>
+                  {peer.audio === false && (
+                    <span className={styles.mutedDot}>
+                      <MicOffIcon />
+                    </span>
+                  )}
+                  {name}
+                </div>
+              </div>
+            );
+          })}
+
+          <div className={`${styles.tile} ${styles.selfTile} ${styles.pip}`}>
+            <video ref={localVideoRef} autoPlay muted playsInline />
+            {!videoEnabled && !sharingScreen && (
+              <div className={styles.avatar}>{initials(username)}</div>
+            )}
+            <div className={styles.nameTag}>
+              {!audioEnabled && (
+                <span className={styles.mutedDot}>
+                  <MicOffIcon />
+                </span>
+              )}
+              {sharingScreen ? "Your screen" : "You"}
             </div>
           </div>
         </div>
-      )}
 
-      <div className={styles.buttonContainers}>
-        <IconButton onClick={toggleVideo} style={{ color: "white" }} aria-label="Toggle camera">
-          {videoEnabled ? <VideocamIcon /> : <VideocamOffIcon />}
-        </IconButton>
-
-        <IconButton onClick={handleEndCall} style={{ color: "#ff4d4f" }} aria-label="Leave call">
-          <CallEndIcon />
-        </IconButton>
-
-        <IconButton onClick={toggleAudio} style={{ color: "white" }} aria-label="Toggle microphone">
-          {audioEnabled ? <MicIcon /> : <MicOffIcon />}
-        </IconButton>
-
-        {screenAvailable && (
-          <IconButton
-            onClick={toggleScreenShare}
-            style={{ color: "white" }}
-            aria-label="Share screen"
+        <div className={styles.bar}>
+          <button
+            type="button"
+            onClick={toggleAudio}
+            className={`${styles.ctrl} ${audioEnabled ? "" : styles.ctrlOff}`}
+            aria-label={audioEnabled ? "Turn off microphone" : "Turn on microphone"}
           >
-            {sharingScreen ? <StopScreenShareIcon /> : <ScreenShareIcon />}
-          </IconButton>
-        )}
+            {audioEnabled ? <MicIcon /> : <MicOffIcon />}
+          </button>
 
-        <Badge badgeContent={unreadCount} max={99} color="warning">
-          <IconButton onClick={toggleChat} style={{ color: "white" }} aria-label="Toggle chat">
+          <button
+            type="button"
+            onClick={toggleVideo}
+            className={`${styles.ctrl} ${videoEnabled ? "" : styles.ctrlOff}`}
+            aria-label={videoEnabled ? "Turn off camera" : "Turn on camera"}
+          >
+            {videoEnabled ? <VideocamIcon /> : <VideocamOffIcon />}
+          </button>
+
+          {screenAvailable && (
+            <button
+              type="button"
+              onClick={toggleScreenShare}
+              className={`${styles.ctrl} ${sharingScreen ? styles.ctrlActive : ""}`}
+              aria-label={sharingScreen ? "Stop sharing screen" : "Share screen"}
+            >
+              {sharingScreen ? <StopScreenShareIcon /> : <ScreenShareIcon />}
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={toggleChat}
+            className={`${styles.ctrl} ${styles.badge} ${showChat ? styles.ctrlActive : ""}`}
+            data-count={unreadCount}
+            aria-label="Toggle chat"
+          >
             <ChatIcon />
-          </IconButton>
-        </Badge>
+          </button>
+
+          <span className={styles.divider} />
+
+          <button
+            type="button"
+            onClick={handleEndCall}
+            className={`${styles.ctrl} ${styles.hangup}`}
+            aria-label="Leave call"
+          >
+            <CallEndIcon />
+          </button>
+        </div>
+
+        {toast && <div className={styles.toast}>{toast}</div>}
       </div>
 
-      <video className={styles.meetUserVideo} ref={localVideoRef} autoPlay muted playsInline />
-
-      <div className={styles.conferenceView}>
-        {remoteStreams.length === 0 && (
-          <p className={styles.waitingText}>Waiting for others to join…</p>
-        )}
-
-        {remoteStreams.map((remote) => (
-          <div key={remote.socketId} className={styles.remoteTile}>
-            <video
-              data-socket={remote.socketId}
-              ref={(el) => {
-                if (el && el.srcObject !== remote.stream) el.srcObject = remote.stream;
-              }}
-              autoPlay
-              playsInline
-            />
+      {showChat && (
+        <aside className={styles.chat}>
+          <div className={styles.chatHead}>
+            <h2>Chat</h2>
+            <button
+              type="button"
+              className={styles.chatClose}
+              onClick={toggleChat}
+              aria-label="Close chat"
+            >
+              <CloseIcon fontSize="small" />
+            </button>
           </div>
-        ))}
-      </div>
 
-      <Snackbar
-        open={Boolean(toast)}
-        autoHideDuration={5000}
-        onClose={() => setToast("")}
-        message={toast}
-      />
+          <div className={styles.log} ref={logRef}>
+            {messages.length === 0 && (
+              <p className={styles.logEmpty}>No messages yet. Say hello.</p>
+            )}
+
+            {messages.map((item, index) => (
+              <div
+                key={index}
+                className={`${styles.msg} ${item.mine ? styles.mine : ""}`}
+              >
+                <span className={styles.msgWho}>{item.mine ? "You" : item.sender}</span>
+                <p>{item.data}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className={styles.composer}>
+            <input
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+              placeholder="Message the room"
+              aria-label="Message the room"
+              maxLength={2000}
+            />
+            <button
+              type="button"
+              className={styles.send}
+              onClick={sendMessage}
+              disabled={!message.trim()}
+            >
+              Send
+            </button>
+          </div>
+        </aside>
+      )}
     </div>
   );
 }
