@@ -447,9 +447,11 @@ body {
     max-width: 440px;
 }
 
+/* min-width overrides the flex default of auto, which is what let the
+   field collapse when a sibling button grew. */
 .mmJoin .mmField {
-    flex: 1;
-    min-width: 0;
+    flex: 1 1 auto;
+    min-width: 8rem;
 }
 
 .mmHomeArt {
@@ -653,10 +655,17 @@ body {
     color: var(--muted);
 }
 
-.mmChoiceCard .mmBtn,
-.mmChoiceCard .mmJoin {
+.mmChoiceCard > .mmBtn,
+.mmChoiceCard > .mmJoin {
     margin-top: auto;
     width: 100%;
+}
+
+/* The Join button sits inside .mmJoin, so it has to keep its natural
+   width — a 100% rule here squeezes the input down to nothing. */
+.mmChoiceCard .mmJoin .mmBtn {
+    width: auto;
+    flex: none;
 }
 
 .mmCreated {
